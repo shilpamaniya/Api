@@ -1,0 +1,164 @@
+using exam_try_api_mvc.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace exam_try_api_mvc.Controllers
+{
+    public class Book : Controller
+    {
+        private static List<MyBook> book = new List<MyBook>();
+        private static HttpClient httpClient = new HttpClient();
+        private string url = "";
+
+        public Book()
+        {
+            url = @"https://localhost:44352/api/Books";
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        }
+
+        // GET: Book
+
+        public async Task<ActionResult> Index()
+        {
+            var msg = await httpClient.GetAsync(url);
+            var BookResponse = msg.Content.ReadAsStringAsync();
+            book = JsonConvert.DeserializeObject<List<MyBook>>(BookResponse.Result);
+            return View(book);
+        }
+
+        // GET: Book/Details/5
+        public ActionResult Details(int id)
+        {
+            return View();
+        }
+
+        // GET: Book/Create
+        public ActionResult Create()
+        {
+            return View();
+        }
+
+        // POST: Book/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Create(MyBook myBook)
+        {
+            try
+            {
+                StringContent bookContent = new StringContent(
+                    JsonConvert.SerializeObject(myBook), Encoding.UTF8, "application/json");
+                var msg = await httpClient.PostAsync(url, bookContent);
+                var BookResponse = msg.Content.ReadAsStringAsync();
+                if (BookResponse.Result.Contains("Conflict"))
+                {
+                    return RedirectToAction(nameof(Create));
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+        // GET: Book/Edit/5
+        public ActionResult Edit(int id)
+        {
+            return View();
+        }
+
+        // POST: Book/Edit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Edit(int id, MyBook bookToEdit)
+        {
+            try
+            {
+                MyBook myBook = await getBookById(id);
+                myBook.BookName = bookToEdit.BookName;
+                myBook.No_Of_Copies = bookToEdit.No_Of_Copies;
+                myBook.Price = bookToEdit.Price;
+                StringContent bookContent = new StringContent(JsonConvert.SerializeObject(myBook),
+                    Encoding.UTF8, "application/json");
+
+                var msg = await httpClient.PutAsync(url + "/" + id, bookContent);
+                var BookResponse = msg.Content.ReadAsStringAsync();
+                book = JsonConvert.DeserializeObject<List<MyBook>>(BookResponse.Result);
+
+                if (BookResponse.Result.Contains("Conflict"))
+                {
+                    return RedirectToAction(nameof(Edit), id);
+                }
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+        private async Task<MyBook> getBookById(int id)
+        {
+
+            var msg = await httpClient.GetAsync(url + "/" + id);
+
+            var BookResponse = msg.Content.ReadAsStringAsync();
+            MyBook myBook = JsonConvert.DeserializeObject<MyBook>(BookResponse.Result);
+            return myBook;
+        }
+
+        // GET: Book/Delete/5
+        public ActionResult Delete(int id)
+        {
+            return View();
+        }
+
+        //Search
+
+        public ActionResult SearchByPrice()
+        {
+            return View();
+        }
+       [HttpPost]
+        private async Task<MyBook> SearchByPrice(int start , int end)
+        {
+
+            var msg = await httpClient.GetAsync(url + "/SearchByPrice/" + start + "/" + end);
+
+            var BookResponse = msg.Content.ReadAsStringAsync();
+            MyBook myBook = JsonConvert.DeserializeObject<MyBook>(BookResponse.Result);
+            return myBook;
+        }
+
+        // POST: Book/Delete/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Delete(int id, IFormCollection collection)
+        {
+            try
+            {
+                var msg = await httpClient.DeleteAsync(url + "/" + id);
+                var BookResponse = msg.Content.ReadAsStringAsync();
+                book = JsonConvert.DeserializeObject<List<MyBook>>(BookResponse.Result);
+                if (BookResponse.Result.Contains("Conflict"))
+                {
+                    return RedirectToAction(nameof(Delete));
+                }
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+    }
+}
