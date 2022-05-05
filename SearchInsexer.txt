@@ -1,0 +1,149 @@
+Model ->StudentIndexer------
+using exam_try_api_mvc.Controllers;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading.Tasks;
+
+namespace exam_try_api_mvc.Models
+{
+    public class StudentIndexer
+    {
+        private static List<MyStudent> student = new List<MyStudent>();
+        private static HttpClient httpClient = new HttpClient();
+        private string url = "";
+
+        public StudentIndexer()
+        {
+            url = @"https://localhost:44352/api/Students";
+            httpClient.DefaultRequestHeaders.Clear();
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _ = getStudents();
+
+        }
+
+        private async Task getStudents()
+        {
+            var msg=await httpClient.GetAsync(url);
+            var StudentResponse=msg.Content.ReadAsStringAsync();
+            student = JsonConvert.DeserializeObject<List<MyStudent>>(StudentResponse.Result);
+
+                
+        }
+        public List<MyStudent> this[string QueryString]
+        {
+            get {
+                List<MyStudent> list = (from s in student
+                                        where s.StudentName.StartsWith(QueryString)
+                                        select s).ToList();
+
+                if (list == null)
+                {
+                    list = (from s in student
+                            where s.StudentName.StartsWith(QueryString)
+                            select s).ToList();
+
+
+                }
+
+                  return list;
+            }
+        
+        }
+    }
+
+}
+
+---------view=>Class=searchStudent
+
+@{
+    ViewData["Title"] = "Serach";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h1>Serach</h1>
+
+<form asp-action="Serach">
+    < input type="text"  name="txtName" placeholder="search by student name"/>
+      <input type="submit" value="Search" class="btn btn-primary"/>
+
+</form>
+@if(ViewData["students"]!=null)
+{
+    <table class="table-responsive-lg">
+    <thead>
+        <tr>
+            <th> StudentId </th>
+            <th>StudentName </th>
+            <th>Gender </th>
+            <th>Age </th>
+            <th>BookId</th>
+            <th>Course</th>
+      
+        </tr>
+        @foreach (var item in (List<MyStudent>)ViewData["students"]) 
+            {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.StudentId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.StudentName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Gender)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Age)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.BookId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Course)
+            </td>
+            </tr>
+            }
+ 
+    </table>
+
+}
+---------------Controller ->serachStudentController-------------
+
+using exam_try_api_mvc.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+
+namespace exam_try_api_mvc.Controllers
+{
+    public class serachStudentController : Controller
+    {
+
+        private StudentIndexer si = new StudentIndexer();
+
+        private List<MyStudent> student;
+
+
+        // POST: serachStudentController/Serach
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Serach(string txtName)
+        {
+            try
+            {
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }   
+
+
+
+
+
